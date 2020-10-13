@@ -1,0 +1,76 @@
+---
+title: "Untitled"
+author: "Marie Mortensen"
+date: "9/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+pacman::p_load(stringr, readr, tidyverse)
+options(scipen = 1000)
+
+#all compare
+output_all_features <- read_delim(
+  "../wav_files/output_files/us_stories_7352.04_elephants_comp_all.csv",
+  ";",
+  escape_double = FALSE,
+  col_names = T
+)
+
+#lld
+lld_features <-
+  read_delim(
+    "../wav_files/output_files/dk_triangles_240A_10_LLD.csv",
+    ";",
+    escape_double = FALSE,
+    col_names = T,
+    trim_ws = TRUE
+  )
+colnames(lld_features)
+```
+
+looping through files
+```{r}
+files_list <- list.files("../wav_files/output_files/", pattern = ".csv")
+
+all_lld_files <- as.data.frame(matrix(0 ,nrow = 1, ncol = 132))
+colnames(all_lld_files) <- colnames(us_stories_7352_04_elephants_comp_lld)
+
+#for (i in 1:length(files_list)){
+file <- read_delim(
+  paste("wav_files/output_files",files_list[1], sep = "/"),
+  ";",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)
+#måske man skal starte med country og så sige if ....
+file$Country <- str_extract(files_list[1],"^[a-z]{2}")
+if(file$Country == "dk"){
+info_list <- stringr::str_match(files_list[1], ".{2}_([a-z]*)_([0-9]*[A-Z])_([0-9]*)_([a-z]*)") 
+file$Story_type <- NA
+file$ID <- info_list[,3]
+file$Condition <- info_list[,2]
+file$Trial <- info_list[,4]
+file$feature_set <- info_list[,5]
+}
+
+if(file$Country == "en"){ #for US stories you have: us_stories_1956_elephants, us is the language, stories the task, 1956 the ID, elephants the story name
+info_list <- stringr::str_match(files_list[3], ".{2}_([a-z]*)_([0-9]*)[._]([0-9]*)_([a-z]*)_([a-z]*[_]?[a-z]*)") 
+file$Story_type <- info_list[,5]
+file$ID <- info_list[,3]
+file$Condition <- info_list[,2]
+file$Trial <- info_list[,4]
+file$feature_set <- info_list[,6]
+
+info_list <- stringr::str_match(files_list[1], ".{2}_([a-z]*)_([0-9]*[A-Z])_([0-9]*)_([a-z]*)")[,2] 
+}
+
+#}
+```
+
+
+
