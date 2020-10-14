@@ -30,7 +30,7 @@ demo_sub <- demodata %>%
 data <- merge(df, demo_sub, by="ID")
 
 #partition
-partitions <- partition_func(data, n=6)
+partitions <- partition_func(demo = demo_sub, features =  df, n=4)
 train <- partitions[[2]]
 hold_out <- partitions[[1]]
 

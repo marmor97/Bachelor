@@ -10,14 +10,21 @@ p_load(tidyverse, groupdata2, dplyr)
 
 #Partitioning function
 
-partition_func <- function(dataframe, hold_size = 0.2, seed=2020, n=158){
+partition_func <- function(demo, features, hold_size = 0.2, seed=2020, n=158){
   set.seed(seed)
-  test_females = dataframe %>% filter(Gender == "Female")  %>%  sample_n(round(n*hold_size,0)/2)
-  train_females = dataframe[dataframe$Gender == "Female" & !dataframe$ID %in% test_females$ID,]
-  test_males = dataframe %>% filter(Gender == "Male")  %>%  sample_n(round(n*hold_size,0)/2)
-  train_males = dataframe[dataframe$Gender == "Male" & !dataframe$ID %in% test_males$ID,]
-  holdout = rbind(test_females, test_males)
-  train_all = rbind(train_females, train_males)
+  #Females
+  demo_hold_fem = demo %>% filter(Gender == "Female")  %>%  sample_n(round(n*hold_size,0)/2)
+  feat_hold_fem = features[features$ID %in% demo_hold_fem$ID,]
+  demo_train_fem = demo[demo$Gender == "Female" & !demo$ID %in% demo_hold_fem$ID,]
+  feat_train_fem = features[features$ID %in% demo_train_fem$ID,]
+  #Males
+  demo_hold_male = demo %>% filter(Gender == "Male")  %>%  sample_n(round(n*hold_size,0)/2)
+  feat_hold_male = features[features$ID %in% demo_hold_male$ID,]
+  demo_train_male = demo[demo$Gender == "Male" & !demo$ID %in% demo_hold_male$ID,]
+  feat_train_male = features[features$ID %in% demo_train_male$ID,]
+  #Combining
+  holdout = rbind(feat_hold_fem, feat_hold_male)
+  train_all = rbind(feat_train_fem, feat_train_male)
   return(list(holdout, train_all))
 }
 
