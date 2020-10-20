@@ -1,0 +1,204 @@
+---
+title: "Initial analysis"
+author: "Marie Mortensen"
+date: "10/19/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+PACKAGES AND FUNCTIONS
+```{r}
+pacman::p_load(tidyverse, readr, glmnet, data.table, broom, forcats, e1071, cvms)
+source("functions/Inspection.R")
+source("functions/Normalize_function.R")
+source("cv funtions .R")
+```
+
+READING FILES AND MERGING WITH DEMODATA
+```{r}
+gemap_us_dk <- read_csv("../wav_files/gemap_all_us_dk.csv")
+
+demo <- read_csv("../DemoData.csv") #reading demodata
+colnames(gemap_us_dk)[2] <- "ID_original" #as some IDs in feature files contain letters and they don't in demodata they are saved in another column
+
+gemap_us_dk <- gemap_us_dk %>% mutate(
+  ID = as.character(str_extract(ID_original, "[0-9]*")) #in order to merge with demodata we extract only numbers from the original ID column
+) 
+
+gemap_us_dk <- gemap_us_dk  %>% #combining demodata and features
+  left_join(demo, 
+            by = "ID") %>% 
+  mutate(
+    Diagnosis = as.factor(Diagnosis) #changing diagnosis column to factor
+  )  %>% 
+  select( #we will not use any of the descriptive columns in the analysis and remove them from the dataset 
+    -c(X1,
+       condition, 
+       AdosSocial, 
+       AdosStereotyped,
+       PIQ,
+       CARS,
+       AdosCommunication,
+       AdosCreativity,
+       story_type,
+       trial,
+       ParentalEducation)
+  )
+
+unique(gemap_us_dk$ID_original) #Checking whether there are missing participants
+#we can see that one participant has NA as ID and we exclude that participant
+which(is.na(gemap_us_dk$ID))#seeing rownumber
+
+na <- gemap_us_dk[is.na(gemap_us_dk$Diagnosis),]
+
+gemap_us_dk <- gemap_us_dk[!is.na(gemap_us_dk$ID),]
+```
+
+NORMALIZING AND PARTITIONING
+```{r}
+#partitioning
+partitions <- partition_func(gemap_us_dk) #partition_func returns a list with two elements; first element is hold_out and second is train
+train <- partitions[[2]]
+hold_out <- partitions[[1]]
+
+#normalizing
+train_scaled <- as.data.frame(
+  scale_function(train, #scale_function takes min and max of all columns in train and subtracts min from all values in each columns and divides by max value to get the empirically scaled columns
+                 datatype = "train"))
+
+hold_out_scaled <- as.data.frame(
+  scale_function(train, 
+                 hold_out, 
+                 datatype = "test"))
+```
+
+REMOVING COLUMNS WITH WITH ZERO VARIATION
+```{r}
+badcolumns <- NULL #making an empty list
+for (columns in 1:length(train_scaled)){ #every column in train
+  if (is.factor(train_scaled[,columns])){ #is the column a factor?
+    print(columns)
+    if(uniqueN(train_scaled[,columns])<2){ #does the column have below 2 levels?
+      bad_column_name <- colnames(train_scaled)[columns] #add the column name to a list of bad columns
+      badcolumns <- c(badcolumns, bad_column_name) #combine it with the existing list
+    }
+  }
+  if (is.numeric(train_scaled[,columns])){ #is the column numeric?
+    print(columns)
+    if(var(train_scaled[,columns], na.rm = T)==0|is.na(var(train_scaled[,columns]))){ #is variance 0?
+      bad_column_name <- colnames(train_scaled)[columns]  #add the column name to a list of bad columns
+      badcolumns <- c(badcolumns, bad_column_name)#combine it with the existing list
+    }  
+  }
+}
+
+train_scaled_clean <- train_scaled[ ,!(colnames(train_scaled) %in% c(badcolumns))] #keep only colnames that are NOT in the badcolumns list
+colnames(train_scaled_clean) #columnames after 
+```
+
+LASSO LAMDATUNING
+```{r}
+preds <- train_scaled_clean %>% select( #specifying the columns that should not be included as predictors
+  -c(ID, 
+     frameTime, 
+     language, 
+     country, 
+     feature_set, 
+     ID_original) #selecting features that will not be predictors/features and saving as a new dataframe
+)
+colnames(train_scaled_clean)
+
+x <- model.matrix(Diagnosis ~ ., data = preds) #making a matrix from formula
+y <- preds$Diagnosis #choosing the dependent variable
+
+lambdas_to_try <- 10^seq(-10, 10, length.out = 100) #selecting lambdas
+
+lasso_cv <- cv.glmnet(x, 
+                      y, 
+                      alpha = 1, # Setting alpha = 1 implements lasso regression
+                      lambda = lambdas_to_try,
+                      standardize = F, 
+                      nfolds = 6, #6 folds means LOOCV
+                      family = "binomial")
+
+plot(lasso_cv)
+#Accessing the best lambda and the coefficients 
+#the best cross-validated lambda 
+lasso_cv$lambda.min #log = -14.18765
+lasso_cv$lambda.1se #log = -12.32697
+```
+
+LASSO COEFFICIENTS
+```{r}
+tidy(lasso_cv$glmnet.fit) %>%
+  filter(lambda == lasso_cv$lambda.min,
+         term != "(Intercept)") %>% #selecting coefficients that are not the intercept
+  mutate(term = fct_reorder(term, estimate)) %>% #this should reorder it to descending but not sure whether it does it
+  ggplot(aes(term, estimate, fill = estimate > 0)) + #applying different colors to estimates above and below 0 
+  geom_col() +
+  theme_minimal() +
+  coord_flip() +
+  labs(y = "Estimated effect") +
+  theme(legend.position = "none")
+
+###measuring frequency of coefficients 
+lasso_coef <- tidy(lasso_cv$glmnet.fit) %>%  
+  filter(lambda == lasso_cv$lambda.1se,
+         term != "(Intercept)") %>% 
+  select(term, estimate) %>%  #maybe it arranges with absolute values already
+  mutate(abs = abs(estimate),
+         term = str_remove_all(term, "`")) %>% 
+  filter(abs > 0)
+
+lasso_desc <- lasso_coef %>% arrange(desc(abs)) #but now we have this and we need to find a universal way to save and count the occurences 
+
+#selecting coefficients
+#train_lasso_features <- train_scaled_clean[,(colnames(train_scaled_clean) %in% lasso_coef$term)] #this makes a new dataframe where there are only the coefficients selected in our lasso feature reduction 
+train_lasso_features <- train_lasso_features %>% 
+  cbind(Diagnosis = train_scaled_clean$Diagnosis, #assuming that the order hasn't been changed we add the diagnosis and id from train_scaled clean
+        ID = train_scaled_clean$ID) 
+
+```
+
+SVM
+```{r}
+mmatrix_lasso <- model.matrix(Diagnosis ~ ., train_lasso_features) #making a new matrix with reduced features 
+
+#creating LOOCV folds
+fold_train <- groupdata2::fold(train_lasso_features,
+                               k = 66,
+                               id_col = "ID"
+)
+fold_train[["Diagnosis"]] <- factor(fold_train[["Diagnosis"]])#making it a factor if it isn't already
+
+# Cross-validate the model function
+#sepcifying the hyperparams 
+hyperparameters <- list( "cost" = c(0.001,0.005,0.01,0.05),
+                         "kernel" = c("linear"))
+# The optional ".n" samples 4 combinations
+svm_hparams <- list(
+  ".n" = 12,
+  "kernel" = c("linear", "radial", "sigmoid"),
+  "cost" = c(0.001,0.005,0.01,0.05) #artikel "Typicality and Emotion in the Voice of Children with Autism Spectrum" bruger 0.001; 0.005; 0.01; 0,05
+)
+
+cv_linear <- cross_validate_fn(
+  fold_train,
+  formulas = "Diagnosis ~ .",
+  type = "binomial",
+  model_fn = svm_model_fn,
+  predict_fn = svm_predict_fn,
+  hyperparameters = hyperparameters,
+  fold_cols = ".folds"
+)
+
+# The `HParams` column has the nested hyperparameter values
+cv %>%
+  select(Dependent, Fixed, HParams, `Balanced Accuracy`, F1, AUC, MCC) %>%
+  tidyr::unnest(cols = "HParams") %>%
+  arrange(desc(`Balanced Accuracy`), desc(F1))
+```
+
