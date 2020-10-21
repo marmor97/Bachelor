@@ -19,16 +19,58 @@ source("cv funtions .R")
 
 READING FILES AND MERGING WITH DEMODATA
 ```{r}
-gemap_us_dk <- read_csv("../wav_files/gemap_all_us_dk.csv")
+gemap_us_dk <- read_csv("gemap_all_us_dk_v2.csv")
 
-demo <- read_csv("../DemoData.csv") #reading demodata
-colnames(gemap_us_dk)[2] <- "ID_original" #as some IDs in feature files contain letters and they don't in demodata they are saved in another column
+#reading demodata
+demo <- read_csv("../DemoData.csv")
+# colnames(gemap_us_dk)[2] <- "ID_original" #as some IDs in feature files contain letters and they don't in demodata they are 
+#saved in another column
+# gemap_us_dk <- gemap_us_dk %>% mutate(
+#   ID = as.character(str_extract(ID_original, "[0-9]*")) #in order to merge with demodata we extract only numbers from the original ID column) 
+# colnames(gemap_us_dk)[2] <- "ID"
 
-gemap_us_dk <- gemap_us_dk %>% mutate(
-  ID = as.character(str_extract(ID_original, "[0-9]*")) #in order to merge with demodata we extract only numbers from the original ID column
+u_gemap <- unique(gemap_us_dk$ID) #unique IDs
+u_demo <- unique(demo$ID)
+
+missing_id <- setdiff(u_demo,u_gemap)#seeing which IDs are not represented in u_gemap
+#MEN NOGLE AF DEM ER DER! DET HAR STINE TJEKKET. DEM MED 100 HAR IKKE MED ALLE ANDRE HAR?!?!?!?!??!?!
+
+gemap_us_dk <- gemap_us_dk %>% 
+  mutate(
+  ID_letter = str_extract(name, "[A-Z]*"),
+  ID_number = str_extract(name, "[0-9]*")
 ) 
+gemap_us_dk$ID
+gemap_us_dk <- gemap_us_dk %>% 
+  unite(ID, ID_letter:ID_number, sep = "")
 
-gemap_us_dk <- gemap_us_dk  %>% #combining demodata and features
+```
+
+NORMALIZING AND PARTITIONING
+```{r}
+#partitioning
+partitions <- partition_func(features = gemap_us_dk, demo = demo, n= 109) #partition_func returns a list with two elements; first element is hold_out and second is train
+train <- partitions[[2]]
+hold_out <- partitions[[1]]
+
+unique(train$ID)
+unique(hold_out$ID)
+
+#normalizing
+train_scaled <- as.data.frame(
+  scale_function(train, #scale_function takes min and max of all columns in train and subtracts min from all values in each columns and divides by max value to get the empirically scaled columns
+                 datatype = "train"))
+
+hold_out_scaled <- as.data.frame(
+  scale_function(train, 
+                 hold_out, 
+                 datatype = "test"))
+```
+
+
+COMBINING DEMO AND FEATURES 
+```{r}
+gemap <- gemap_us_dk  %>% #combining demodata and features
   left_join(demo, 
             by = "ID") %>% 
   mutate(
@@ -47,33 +89,8 @@ gemap_us_dk <- gemap_us_dk  %>% #combining demodata and features
        trial,
        ParentalEducation)
   )
-
-unique(gemap_us_dk$ID_original) #Checking whether there are missing participants
-#we can see that one participant has NA as ID and we exclude that participant
-which(is.na(gemap_us_dk$ID))#seeing rownumber
-
-na <- gemap_us_dk[is.na(gemap_us_dk$Diagnosis),]
-
-gemap_us_dk <- gemap_us_dk[!is.na(gemap_us_dk$ID),]
 ```
 
-NORMALIZING AND PARTITIONING
-```{r}
-#partitioning
-partitions <- partition_func(gemap_us_dk) #partition_func returns a list with two elements; first element is hold_out and second is train
-train <- partitions[[2]]
-hold_out <- partitions[[1]]
-
-#normalizing
-train_scaled <- as.data.frame(
-  scale_function(train, #scale_function takes min and max of all columns in train and subtracts min from all values in each columns and divides by max value to get the empirically scaled columns
-                 datatype = "train"))
-
-hold_out_scaled <- as.data.frame(
-  scale_function(train, 
-                 hold_out, 
-                 datatype = "test"))
-```
 
 REMOVING COLUMNS WITH WITH ZERO VARIATION
 ```{r}
@@ -97,24 +114,48 @@ for (columns in 1:length(train_scaled)){ #every column in train
 
 train_scaled_clean <- train_scaled[ ,!(colnames(train_scaled) %in% c(badcolumns))] #keep only colnames that are NOT in the badcolumns list
 colnames(train_scaled_clean) #columnames after 
+
+#Maybe as well with hold_out
+
 ```
 
 LASSO LAMDATUNING
 ```{r}
-preds <- train_scaled_clean %>% select( #specifying the columns that should not be included as predictors
-  -c(ID, 
-     frameTime, 
-     language, 
-     country, 
-     feature_set, 
-     ID_original) #selecting features that will not be predictors/features and saving as a new dataframe
+preds <- train_scaled_clean  %>% #combining demodata and features
+  left_join(demo, 
+            by = "ID")%>% 
+  select( #specifying the columns that should not be included as predictors
+  -c(X1,
+    condition,
+    name,
+    ID, 
+    frameTime, 
+    language, 
+    country, 
+    feature_set, 
+    story_type,
+    Age,
+    AdosCreativity,
+    AdosSocial,
+    AdosStereotyped,
+    AdosCommunication,
+    TIQ,
+    PIQ,
+    VIQ,
+    SRS,
+    PPVT,
+    ParentalEducation,
+    CARS,
+    Leiter
+     ) #selecting features that will not be predictors/features and saving as a new dataframe
 )
-colnames(train_scaled_clean)
+colnames(preds)
+
 
 x <- model.matrix(Diagnosis ~ ., data = preds) #making a matrix from formula
 y <- preds$Diagnosis #choosing the dependent variable
 
-lambdas_to_try <- 10^seq(-10, 10, length.out = 100) #selecting lambdas
+lambdas_to_try <- 10^seq(-10, 10, length.out = 1000) #selecting lambdas
 
 lasso_cv <- cv.glmnet(x, 
                       y, 
@@ -123,6 +164,8 @@ lasso_cv <- cv.glmnet(x,
                       standardize = F, 
                       nfolds = 6, #6 folds means LOOCV
                       family = "binomial")
+
+
 
 plot(lasso_cv)
 #Accessing the best lambda and the coefficients 
@@ -134,7 +177,7 @@ lasso_cv$lambda.1se #log = -12.32697
 LASSO COEFFICIENTS
 ```{r}
 tidy(lasso_cv$glmnet.fit) %>%
-  filter(lambda == lasso_cv$lambda.min,
+  filter(lambda == lasso_cv$lambda.1se,
          term != "(Intercept)") %>% #selecting coefficients that are not the intercept
   mutate(term = fct_reorder(term, estimate)) %>% #this should reorder it to descending but not sure whether it does it
   ggplot(aes(term, estimate, fill = estimate > 0)) + #applying different colors to estimates above and below 0 
@@ -155,12 +198,44 @@ lasso_coef <- tidy(lasso_cv$glmnet.fit) %>%
 
 lasso_desc <- lasso_coef %>% arrange(desc(abs)) #but now we have this and we need to find a universal way to save and count the occurences 
 
+train_scaled_clean <- train_scaled_clean  %>% #combining demodata and features
+  left_join(demo, 
+            by = "ID")%>% 
+  select( #specifying the columns that should not be included as predictors
+  -c(X1,
+    condition,
+    name,
+    # ID, 
+    frameTime, 
+    language, 
+    country, 
+    feature_set, 
+    story_type,
+    Age,
+    AdosCreativity,
+    AdosSocial,
+    AdosStereotyped,
+    AdosCommunication,
+    TIQ,
+    PIQ,
+    VIQ,
+    SRS,
+    PPVT,
+    ParentalEducation,
+    CARS,
+    Leiter
+     ) #selecting features that will not be predictors/features and saving as a new dataframe
+)
 #selecting coefficients
-#train_lasso_features <- train_scaled_clean[,(colnames(train_scaled_clean) %in% lasso_coef$term)] #this makes a new dataframe where there are only the coefficients selected in our lasso feature reduction 
+train_lasso_features <- train_scaled_clean[,(colnames(train_scaled_clean) %in% lasso_coef$term)] #this makes a new dataframe where there are only the coefficients selected in our lasso feature reduction ##GENDER KOMMER IKKE MED
+train_lasso_features$Gender <- train_scaled_clean$Gender
+
 train_lasso_features <- train_lasso_features %>% 
   cbind(Diagnosis = train_scaled_clean$Diagnosis, #assuming that the order hasn't been changed we add the diagnosis and id from train_scaled clean
         ID = train_scaled_clean$ID) 
 
+
+write.csv(train_lasso_features, "selcted_features_gemap.csv")
 ```
 
 SVM
@@ -176,6 +251,9 @@ fold_train[["Diagnosis"]] <- factor(fold_train[["Diagnosis"]])#making it a facto
 
 # Cross-validate the model function
 #sepcifying the hyperparams 
+hyperparameters <- list( "cost" = c(0.001),
+                         "kernel" = c("linear"))
+
 hyperparameters <- list( "cost" = c(0.001,0.005,0.01,0.05),
                          "kernel" = c("linear"))
 # The optional ".n" samples 4 combinations
@@ -200,5 +278,10 @@ cv %>%
   select(Dependent, Fixed, HParams, `Balanced Accuracy`, F1, AUC, MCC) %>%
   tidyr::unnest(cols = "HParams") %>%
   arrange(desc(`Balanced Accuracy`), desc(F1))
+```
+
+PERFORMANCE
+```{r}
+
 ```
 
