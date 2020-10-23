@@ -20,29 +20,30 @@ source("cv funtions .R")
 READING FILES AND MERGING WITH DEMODATA
 ```{r}
 gemap_us_dk <- read_csv("gemap_all_us_dk_v2.csv")
-
+head(gemap_us_dk)
 #reading demodata
 demo <- read_csv("../DemoData.csv")
 # colnames(gemap_us_dk)[2] <- "ID_original" #as some IDs in feature files contain letters and they don't in demodata they are 
 #saved in another column
 # gemap_us_dk <- gemap_us_dk %>% mutate(
 #   ID = as.character(str_extract(ID_original, "[0-9]*")) #in order to merge with demodata we extract only numbers from the original ID column) 
-# colnames(gemap_us_dk)[2] <- "ID"
+colnames(gemap_us_dk)[2] <- "ID"
 
-u_gemap <- unique(gemap_us_dk$ID) #unique IDs
-u_demo <- unique(demo$ID)
-
-missing_id <- setdiff(u_demo,u_gemap)#seeing which IDs are not represented in u_gemap
-#MEN NOGLE AF DEM ER DER! DET HAR STINE TJEKKET. DEM MED 100 HAR IKKE MED ALLE ANDRE HAR?!?!?!?!??!?!
 
 gemap_us_dk <- gemap_us_dk %>% 
   mutate(
-  ID_letter = str_extract(name, "[A-Z]*"),
-  ID_number = str_extract(name, "[0-9]*")
+  ID_letter = str_extract(ID, "[A-Z]*"),
+  ID_number = str_extract(ID, "[0-9]*")
 ) 
 gemap_us_dk$ID
 gemap_us_dk <- gemap_us_dk %>% 
   unite(ID, ID_letter:ID_number, sep = "")
+
+
+u_gemap <- unique(gemap_us_dk$ID) #unique IDs
+u_demo <- unique(demo$ID)
+
+missing_id <- setdiff(u_demo,u_gemap)
 
 ```
 
@@ -94,29 +95,10 @@ gemap <- gemap_us_dk  %>% #combining demodata and features
 
 REMOVING COLUMNS WITH WITH ZERO VARIATION
 ```{r}
-badcolumns <- NULL #making an empty list
-for (columns in 1:length(train_scaled)){ #every column in train
-  if (is.factor(train_scaled[,columns])){ #is the column a factor?
-    print(columns)
-    if(uniqueN(train_scaled[,columns])<2){ #does the column have below 2 levels?
-      bad_column_name <- colnames(train_scaled)[columns] #add the column name to a list of bad columns
-      badcolumns <- c(badcolumns, bad_column_name) #combine it with the existing list
-    }
-  }
-  if (is.numeric(train_scaled[,columns])){ #is the column numeric?
-    print(columns)
-    if(var(train_scaled[,columns], na.rm = T)==0|is.na(var(train_scaled[,columns]))){ #is variance 0?
-      bad_column_name <- colnames(train_scaled)[columns]  #add the column name to a list of bad columns
-      badcolumns <- c(badcolumns, bad_column_name)#combine it with the existing list
-    }  
-  }
-}
-
+source("clean column function.R")
+badcolumns <- clean_cols(df = train_scaled)
 train_scaled_clean <- train_scaled[ ,!(colnames(train_scaled) %in% c(badcolumns))] #keep only colnames that are NOT in the badcolumns list
 colnames(train_scaled_clean) #columnames after 
-
-#Maybe as well with hold_out
-
 ```
 
 LASSO LAMDATUNING
@@ -174,6 +156,40 @@ lasso_cv$lambda.min #log = -14.18765
 lasso_cv$lambda.1se #log = -12.32697
 ```
 
+LASSO IN CARET
+```{r}
+caret_lambda_grid <- expand.grid(alpha = 1, lambda = lambdas_to_try)
+
+k_folds = uniqueN(train_scaled_clean$ID)
+lasso_folds <- caret::groupKFold(group = train_scaled_clean$ID, k = k.folds) 
+
+fold_train <- groupdata2::fold(train_scaled_clean,
+                               k = uniqueN(train_scaled_clean$ID),
+                               id_col = "ID"
+)
+
+control <- caret::trainControl( # k Folds grouped by subject cross validation, repeated 3 times
+    method = "LOOCV", 
+    number = k_folds, 
+    # repeats = 3,
+    index = lasso_folds,
+    # savePredictions = T,
+    # summaryFunction = allSummary,
+    # classProbs = T
+    )
+  
+  
+lambdas_to_try <- 
+lasso_caret<- caret::train(x, 
+                    y, 
+                    method = "glmnet", 
+                    tuneGrid = caret_lambda_grid, 
+                    trainControl = control
+                    )
+
+```
+
+
 LASSO COEFFICIENTS
 ```{r}
 tidy(lasso_cv$glmnet.fit) %>%
@@ -227,7 +243,7 @@ train_scaled_clean <- train_scaled_clean  %>% #combining demodata and features
      ) #selecting features that will not be predictors/features and saving as a new dataframe
 )
 #selecting coefficients
-train_lasso_features <- train_scaled_clean[,(colnames(train_scaled_clean) %in% lasso_coef$term)] #this makes a new dataframe where there are only the coefficients selected in our lasso feature reduction ##GENDER KOMMER IKKE MED
+train_lasso_features <- train_scaled_clean[,c("ID", "Diagnosis", "Gender"), colnames(train_scaled_clean[train_scaled_clean]) %in% lasso_coef$term] #this makes a new dataframe where there are only the coefficients selected in our lasso feature reduction ##GENDER KOMMER IKKE MED
 train_lasso_features$Gender <- train_scaled_clean$Gender
 
 train_lasso_features <- train_lasso_features %>% 
