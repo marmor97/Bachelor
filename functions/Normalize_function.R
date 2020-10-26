@@ -19,7 +19,7 @@ scale_function <- function(df1, df2, datatype){
       if(is.numeric(df1[,i])){
       xmin = min(df1[i])
       xmax = max(df1[i])
-      df1[i] <- (df1[i]-xmin)/xmax
+      df1[i] <- (df1[i]-xmin)/(xmax - xmin)
       }
     }
   }
@@ -28,7 +28,7 @@ scale_function <- function(df1, df2, datatype){
       if(is.numeric(df2[,i])){
       xmin = min(df1[i])
       xmax = max(df1[i])
-      df2[i] <- (df2[i]-xmin)/xmax
+      df2[i] <- (df2[i]-xmin)/(xmax - xmin)
       }
     }
     df1 <-  df2
