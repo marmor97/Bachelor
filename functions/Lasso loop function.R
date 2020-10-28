@@ -45,6 +45,6 @@ for(i in (1:length(unique(fold_train$.folds)))){
   test_csv <- test[,c("ID", "Gender", "Diagnosis", 
                             colnames(test[,(colnames(test) %in% lasso_coef$term)]))]
   
-  write.csv(test_csv, paste(i, "test_set.csv", sep = " "))
+  write.csv(test_csv, paste(i, "test_set.csv", sep = "_"))
 }
 }
