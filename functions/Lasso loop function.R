@@ -1,6 +1,6 @@
 
 #Lasso loop
-lasso_function <- function(train_data, folds, id_col){
+lasso_function <- function(train_data, folds, id_col, featureset = featureset, language = language){
 fold_train <- train_data %>% 
   groupdata2::fold(.,
                    k = folds,
@@ -8,16 +8,16 @@ fold_train <- train_data %>%
 #for i in nfolds
 for(i in (1:length(unique(fold_train$.folds)))){
   print(i)
-  train <- fold_train  %>% 
+  lasso_train <- fold_train  %>% 
     filter(.folds != i) %>% 
     select(-c(id_col)) #, .folds
   
-  test <- fold_train  %>% 
+  lasso_test <- fold_train  %>% 
     filter(.folds == i)
   
   ###DEFINING VARIABLES
-  x <- model.matrix(Diagnosis ~ ., data = train[,1:(length(train)-1)]) #making a matrix from formula
-  y <- train$Diagnosis#choosing the dependent variable
+  x <- model.matrix(Diagnosis ~ ., data = lasso_train[,1:(length(lasso_train)-1)]) #making a matrix from formula
+  y <- lasso_train$Diagnosis#choosing the dependent variable
   
   ###LASSO
   cv_lasso <- cv.glmnet(x, 
@@ -39,16 +39,15 @@ for(i in (1:length(unique(fold_train$.folds)))){
            test_fold = paste(i)) %>% 
     filter(abs > 0)
   
-  # name <- paste("lasso_feature_testfold",i, sep = "_")
-  # write.csv(lasso_coef, paste(name, "csv", sep = "."))
-  # test_csv <- test[,c("ID", "Gender", "Diagnosis", 
-  #                           colnames(test[,(colnames(test) %in% lasso_coef$term)]))]
-  new_fold_train <- fold_train[,c("ID", "Gender", "Diagnosis", colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
-  name_2 <- paste("test_fold",i, sep = "_")
-  write.csv(new_fold_train, paste(name_2, "csv", sep = "."))
+  #Making name for the csvfile
+  name <- paste("lasso", featureset, language, "testfold", i, sep = "_")
+  #selecting columns to keep in csv file
+  train_csv <- train_data[,c("ID", "Gender", "Diagnosis", 
+                              colnames(train_data[,(colnames(train_data) %in% lasso_coef$term)]))]
+  #writing the csv
+  write.csv(train_csv, paste(name, "csv", sep = "."))
   
-  # write.csv(test_csv, paste(i, "test_set.csv", sep = "_"))
 }
 }
 
-lasso_function(train_scaled, folds = 5, id_col = "ID")
+#lasso_function(train_scaled, folds = 5, id_col = "ID")

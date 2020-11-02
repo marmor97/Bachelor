@@ -2,39 +2,46 @@
 library(pacman)
 p_load(tidyverse, groupdata2, dplyr)
 
-demodata <- read.csv("DemoData.csv")
-demodata <- demodata %>% subset(ID != "130" & ID != "104" & ID!= "105" & ID != "111" & ID != "114")
-
-gemap_us_dk <- read_csv("gemap_all_us_dk_v2.csv")
-colnames(gemap_us_dk)[2] <- "ID"
-
-gemap_us_dk <- gemap_us_dk %>% 
-  mutate(
-    ID_letter = str_extract(ID, "[A-Z]*"),
-    ID_number = str_extract(ID, "[0-9]*")
-  ) 
-gemap_us_dk$ID
-gemap_us_dk <- gemap_us_dk %>% 
-  unite(ID, ID_letter:ID_number, sep = "")
-
-gemap_us_dk <- gemap_us_dk %>% subset(ID != "130" & ID != "104" & ID!= "105" & ID != "111" & ID != "114")
-
-#Number of participants 
-
-demodata %>% group_by(Gender, Diagnosis) %>% summarise(n())
-
-#splitting in languages
-dk_demodata <- demodata %>% filter(language =="dk")
-dk_demodata %>% group_by(Gender, Diagnosis) %>% summarise(n=n())
-
-us_demodata <- demodata %>% filter(language == "us")
-demodata %>% group_by(Diagnosis) %>% summarise(mean_age = mean(Age, na.rm = T),
-                                                  sd_age = sd(Age, na.rm = T),
-                                                  min_age = min(Age, na.rm = T),
-                                                  min_age_years = min_age/12,
-                                                  max_age = max(Age, na.rm = T),
-                                                  max_age_years = max_age/12,)
-
+# demodata <- read.csv("DemoData.csv")
+# demodata <- demodata %>% subset(ID != "130" & ID != "104" & ID!= "105" & ID != "111" & ID != "114")
+# 
+# gemap_us_dk <- read_csv("gemap_all_us_dk_v2.csv")
+# colnames(gemap_us_dk)[2] <- "ID"
+# 
+# gemap_us_dk <- gemap_us_dk %>% 
+#   mutate(
+#     ID_letter = str_extract(ID, "[A-Z]*"),
+#     ID_number = str_extract(ID, "[0-9]*")
+#   ) 
+# gemap_us_dk$ID
+# gemap_us_dk <- gemap_us_dk %>% 
+#   unite(ID, ID_letter:ID_number, sep = "")
+# 
+# gemap_us_dk <- gemap_us_dk %>% subset(ID != "130" & ID != "104" & ID!= "105" & ID != "111" & ID != "114")
+# 
+# #Number of participants 
+# 
+# demodata %>% group_by(Gender, Diagnosis) %>% summarise(n())
+# 
+# #splitting in languages
+# dk_demodata <- demodata %>% filter(language =="dk")
+# dk_demodata %>% group_by(Diagnosis) %>% summarise(mean_age = mean(Age, na.rm = T),
+#                                                sd_age = sd(Age, na.rm = T),
+#                                                min_age = min(Age, na.rm = T),
+#                                                min_age_years = min_age/12,
+#                                                max_age = max(Age, na.rm = T),
+#                                                max_age_years = max_age/12,)
+# dk_demodata %>% group_by(Diagnosis, Gender) %>% summarise(n())
+# 
+# 
+# us_demodata <- demodata %>% filter(language == "us")
+# demodata %>% group_by(Diagnosis) %>% summarise(mean_age = mean(Age, na.rm = T),
+#                                                   sd_age = sd(Age, na.rm = T),
+#                                                   min_age = min(Age, na.rm = T),
+#                                                   min_age_years = min_age/12,
+#                                                   max_age = max(Age, na.rm = T),
+#                                                   max_age_years = max_age/12,)
+# 
 
 
 #Partitioning function
@@ -93,13 +100,10 @@ partition_func <- function(demo, features, hold_size = 0.2, seed=2020, n, langua
     }
   return(list(holdout, train_all))
 }
+# 
+#  splittet_data <- partition_func(demo = dk_demodata, features = gemap_us_dk, n = 67, language = "dk")
+#  hold_out <- splittet_data[[1]]
+#  train <- splittet_data[[2]]
+#  
+#  length(unique(hold_out$ID))
 
- splittet_data <- partition_func(demo = dk_demodata, features = gemap_us_dk, n = 67, language = "dk")
- hold_out <- splittet_data[[1]]
- train <- splittet_data[[2]]
- 
- length(unique(hold_out$ID))
-
-12/67
-67*0.2
-13.4/2/2
