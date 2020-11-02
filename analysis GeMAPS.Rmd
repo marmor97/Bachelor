@@ -1,0 +1,240 @@
+---
+title: "Analysis GeMAPS"
+author: "Marie Mortensen"
+date: "10/26/2020"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+PACKAGES AND FUNCTIONS
+```{r}
+pacman::p_load(tidyverse, readr, glmnet, data.table, broom, forcats, e1071, cvms)
+source("functions/Inspection.R")
+source("functions/Normalize_function.R")
+source("cv funtions .R")
+```
+
+Loading data 
+```{r}
+#all
+gemap_us_dk <- read_csv("gemap_all_us_dk_v2.csv")
+
+#dk
+dk <- gemap_us_dk %>% filter(country == "dk")
+head(dk)
+colnames(dk)[2] <- "ID"
+
+#demo
+demo <- read_csv("../DemoData.csv")
+demo_dk <- demo %>% filter(language == "dk")
+
+```
+
+Cleaning data
+```{r}
+dk <- dk %>% 
+  mutate(
+  ID = as.character(ID),
+  ID_letter = str_extract(ID, "[A-Z]*"),
+  ID_number = str_extract(ID, "[0-9]*")
+) 
+dk <- dk %>% 
+  unite(ID, ID_letter:ID_number, sep = "")
+
+#removing missing ID from demodata
+demo_dk <- demo_dk %>% subset(ID != "103"& ID != "104"& ID !="105"& ID !="111"& ID !="114")
+```
+
+Partitioning
+```{r}
+partitions <- partition_func(features = dk, demo = demo_dk, n= uniqueN(dk$ID)) #partition_func returns a list with two elements; first element is hold_out and second is train
+train <- partitions[[2]]
+hold_out <- partitions[[1]]
+
+#normalizing
+train_scaled <- as.data.frame(
+  scale_function(train, #scale_function takes min and max of all columns in train and subtracts min from all values in each columns and divides by max value to get the empirically scaled columns
+                 datatype = "train"))
+
+hold_out_scaled <- as.data.frame(
+  scale_function(train, 
+                 hold_out, 
+                 datatype = "test"))
+```
+
+Combining demo and feature-set values
+```{r}
+train_scaled <- train_scaled %>% #combining demodata and features
+  left_join(demo_dk, 
+            by = "ID") %>% 
+  mutate(
+    Diagnosis = as.factor(Diagnosis) #changing diagnosis column to factor
+  )  %>% 
+  select( #we will not use any of the descriptive columns in the analysis and remove them from the dataset 
+  -c(X1,
+    condition,
+    frameTime, 
+    language, 
+    country, 
+    feature_set, 
+    story_type,
+    Age,
+    AdosCreativity,
+    AdosSocial,
+    AdosStereotyped,
+    AdosCommunication,
+    TIQ,
+    PIQ,
+    VIQ,
+    SRS,
+    PPVT,
+    ParentalEducation,
+    CARS,
+    Leiter
+     ))
+
+```
+
+Removing column w/ zero variation and no factor variation
+```{r}
+source("clean column function.R")
+badcolumns <- clean_cols(df = train_scaled)
+
+train_scaled_clean <- train_scaled[ ,!(colnames(train_scaled) %in% c(badcolumns))] #keep only colnames that are NOT in the badcolumns list
+```
+
+Lasso loop
+```{r}
+fold_train <- train_scaled_clean %>% 
+  groupdata2::fold(.,
+                   k = 5,
+                   id_col = "ID") %>%  #new col called .fold
+  select(-c(trial))
+
+#for i in nfolds
+for(i in (1:length(unique(fold_train$.folds)))){
+  print(i)
+  train <- fold_train  %>% 
+    select(-c(ID)) %>% 
+    filter(.folds != i)
+  
+  test <- fold_train  %>% 
+    filter(.folds == i)
+  
+  ###DEFINING VARIABLES
+  x <- model.matrix(Diagnosis ~ ., data = train) #making a matrix from formula
+  y <- train$Diagnosis#choosing the dependent variable
+  
+  ###LASSO
+  cv_lasso <- cv.glmnet(x, 
+                        y, 
+                        alpha = 1, # Setting alpha = 1 implements lasso regression
+                        standardize = F,
+                        family = "binomial",
+                        type.measure = "auc")
+  
+
+    ###EXTRACTING COEFFICIENTS
+  lasso_coef <- tidy(cv_lasso$glmnet.fit) %>%  
+    filter(lambda == cv_lasso$lambda.1se,
+           term != "(Intercept)") %>% 
+    select(term, estimate) %>%  #maybe it arranges with absolute values already
+    mutate(abs = abs(estimate),
+           term = str_remove_all(term, "`"), 
+           lambda_1se = paste(cv_lasso$lambda.1se),
+           test_fold = paste(i)) %>% 
+    filter(abs > 0)
+
+  name <- paste("lasso_feature_fold",i, sep = "_")
+  write.csv(lasso_coef, paste(name, "csv", sep = "."))
+  
+  test_csv <- lasso_coef[,c("ID", "Gender", "Diagnosis", 
+                            colnames(test[,(colnames(test) %in% lasso_coef$term)]))]
+
+  write.csv(test_csv, paste(i, "test_set.csv", sep = " "))
+}
+
+```
+
+
+
+
+Extracting and saving coefficients
+```{r}
+#the plot w/ coefficients 
+tidy(lasso_caret$glmnet.fit) %>%
+  filter(lambda == lasso_caret$lambda.1se,
+         term != "(Intercept)") %>% #selecting coefficients that are not the intercept
+  mutate(term = fct_reorder(term, estimate)) %>% #this should reorder it to descending but not sure whether it does it
+  ggplot(aes(term, estimate, fill = estimate > 0)) + #applying different colors to estimates above and below 0 
+  geom_col() +
+  theme_minimal() +
+  coord_flip() +
+  labs(y = "Estimated effect") +
+  theme(legend.position = "none")
+
+#measuring frequency of coefficients 
+lasso_coef <- tidy(lasso_caret$glmnet.fit) %>%  
+  filter(lambda == lasso_caret$lambda.1se,
+         term != "(Intercept)") %>% 
+  select(term, estimate) %>%  #maybe it arranges with absolute values already
+  mutate(abs = abs(estimate),
+         term = str_remove_all(term, "`")) %>% 
+  filter(abs > 0)
+
+
+
+```
+
+
+Saving coefficients
+```{r}
+#selecting coefficients
+train_lasso_features_dk <- train_scaled_clean[,c("ID", "Gender", "Diagnosis", colnames(train_scaled_clean[,(colnames(train_scaled_clean) %in% lasso_coef$term)]))]
+
+write.csv(train_lasso_features_dk, "train_selected_features_gemap_dk.csv")
+
+#selecting coefficients
+test_lasso_features_dk <- hold_out_scaled[,c("ID", "Gender", "Diagnosis", colnames(hold_out_scaled[,(colnames(hold_out_scaled) %in% lasso_coef$term)]))]
+
+write.csv(test_lasso_features_dk, "test_selected_features_gemap_dk.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
