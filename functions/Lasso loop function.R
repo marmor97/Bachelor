@@ -10,14 +10,16 @@ for(i in (1:length(unique(fold_train$.folds)))){
   print(i)
   lasso_train <- fold_train  %>% 
     filter(.folds != i) %>% 
-    select(-c(id_col)) #, .folds
+    select(-c(id_col, trial)) #, .folds
   
   lasso_test <- fold_train  %>% 
     filter(.folds == i)
   
   ###DEFINING VARIABLES
   x <- model.matrix(Diagnosis ~ ., data = lasso_train[,1:(length(lasso_train)-1)]) #making a matrix from formula
-  y <- lasso_train$Diagnosis#choosing the dependent variable
+  print(nrow(x))
+  y <- lasso_train$Diagnosis #choosing the dependent variable
+  print(length(y))
   
   ###LASSO
   cv_lasso <- cv.glmnet(x, 
@@ -42,8 +44,15 @@ for(i in (1:length(unique(fold_train$.folds)))){
   #Making name for the csvfile
   name <- paste("lasso", featureset, language, "testfold", i, sep = "_")
   #selecting columns to keep in csv file
+  print(colnames(train_data))
+  if (language == "dk"){
   train_csv <- train_data[,c("ID", "Gender", "Diagnosis", 
                               colnames(train_data[,(colnames(train_data) %in% lasso_coef$term)]))]
+  }
+  else {
+    train_csv <- train_data[,c("ID", "Diagnosis", 
+                               colnames(train_data[,(colnames(train_data) %in% lasso_coef$term)]))]
+  }
   #writing the csv
   write.csv(train_csv, paste(name, "csv", sep = "."))
   

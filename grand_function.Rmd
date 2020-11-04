@@ -21,19 +21,24 @@ source("functions/clean column function.R")
 
 Loading data 
 ```{r}
-compare_dk <- read_csv("compare_dk.csv")
-compare_us <- read_csv("compare_us.csv")
+# compare_dk <- read_csv("compare_dk.csv")
+# compare_us <- read_csv("compare_us.csv")
 egemaps_dk <- read_csv("egemaps_dk.csv")
 egemaps_us <- read_csv("egemaps_us.csv")
-gemaps_dk  <- read_csv("gemaps_dk.csv") 
-gemaps_us  <- read_csv("gemaps_us.csv")
+# gemaps_dk  <- read_csv("gemaps_dk.csv") 
+# gemaps_us  <- read_csv("gemaps_us.csv")
 demodata   <- read_csv("DemoData.csv")
 
 ```
 
 Function to run on all six files
 ```{r}
-grand_function <- function(feature_dataframe, demo_dataframe, language, featureset, n_lasso_folds = 5){
+grand_function <- function(feature_dataframe, 
+                           demo_dataframe, 
+                           language, 
+                           featureset, 
+                           n_lasso_folds = 5){
+  set.seed(2020)
   ###Getting the correct dataframes###
   features <- feature_dataframe %>% select(-name)
   demo <- demo_dataframe %>% filter(language == language)
@@ -76,7 +81,8 @@ grand_function <- function(feature_dataframe, demo_dataframe, language, features
   left_join(demo, 
             by = "ID") %>% 
   mutate(
-    Diagnosis = as.factor(Diagnosis) #changing diagnosis column to factor
+    Diagnosis = as.factor(Diagnosis),
+    Gender = as.factor(Gender)#changing diagnosis column to factor
   )  %>% 
   select( #we will not use any of the descriptive columns in the analysis and remove them from the dataset 
   -c(X1,
@@ -100,6 +106,7 @@ grand_function <- function(feature_dataframe, demo_dataframe, language, features
     CARS,
     Leiter
      ))
+  print(unique(train_scaled$Diagnosis))
   
   ###Removing column w/ zero variation and no factor variation###
   badcolumns <- clean_cols(df = train_scaled)
@@ -131,9 +138,20 @@ grand_function(feature_dataframe = gemaps_us,
                featureset = "gemaps")
 ```
 
+Running on egemaps_us
+```{r}
+grand_function(feature_dataframe = egemaps_us, 
+               demo_dataframe = demodata, 
+               language = "us",
+               featureset = "egemaps")
+```
+
 Running on egemaps_dk
 ```{r}
-
+grand_function(feature_dataframe = egemaps_dk, 
+               demo_dataframe = demodata, 
+               language = "dk",
+               featureset = "egemaps")
 ```
 
 
