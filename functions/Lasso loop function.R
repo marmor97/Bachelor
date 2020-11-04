@@ -44,14 +44,13 @@ for(i in (1:length(unique(fold_train$.folds)))){
   #Making name for the csvfile
   name <- paste("lasso", featureset, language, "testfold", i, sep = "_")
   #selecting columns to keep in csv file
-  print(colnames(train_data))
   if (language == "dk"){
-  train_csv <- train_data[,c("ID", "Gender", "Diagnosis", 
-                              colnames(train_data[,(colnames(train_data) %in% lasso_coef$term)]))]
+  train_csv <- fold_train[,c("ID", "Gender", "Diagnosis", ".folds",
+                              colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
   }
   else {
-    train_csv <- train_data[,c("ID", "Diagnosis", 
-                               colnames(train_data[,(colnames(train_data) %in% lasso_coef$term)]))]
+    train_csv <- fold_train[,c("ID", "Diagnosis", ".folds",
+                               colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
   }
   #writing the csv
   write.csv(train_csv, paste(name, "csv", sep = "."))

@@ -106,7 +106,7 @@ grand_function <- function(feature_dataframe,
     CARS,
     Leiter
      ))
-  print(unique(train_scaled$Diagnosis))
+
   
   ###Removing column w/ zero variation and no factor variation###
   badcolumns <- clean_cols(df = train_scaled)
