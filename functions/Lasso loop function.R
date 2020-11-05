@@ -5,6 +5,10 @@ fold_train <- train_data %>%
   groupdata2::fold(.,
                    k = folds,
                    id_col = id_col)  #new col called .fold
+
+pacman::p_load(doMC)
+registerDoMC(cores = 3)
+
 #for i in nfolds
 for(i in (1:length(unique(fold_train$.folds)))){
   print(i)
@@ -21,18 +25,19 @@ for(i in (1:length(unique(fold_train$.folds)))){
   y <- lasso_train$Diagnosis #choosing the dependent variable
   print(length(y))
   
-  lambdas <- lambda_65 = seq(0.0001, 1000, length = 65000)
+  lambdas <- seq(0.0001, 1000, length = 65000)
   
   ###LASSO
   set.seed(2020)
-  cv_lasso <- cv.glmnet(x, 
+  cv_lasso <- system.time(cv.glmnet(x, 
                         y, 
                         alpha = 1, # Setting alpha = 1 implements lasso regression
-                        lamda = lambdas,
                         standardize = F,
+                        lambda = lambdas,
                         family = "binomial",
-                        type.measure = "auc")
-  
+                        type.measure = "auc",
+                        parallel = TRUE))
+
   
   ###EXTRACTING COEFFICIENTS
   lasso_coef <- tidy(cv_lasso$glmnet.fit) %>%  
