@@ -28,6 +28,7 @@ for(i in (1:length(unique(fold_train$.folds)))){
                         standardize = F,
                         family = "binomial",
                         type.measure = "auc")
+                        #lambda = seq(0.0001, 1000,  100.000 ))
   
   
   ###EXTRACTING COEFFICIENTS
