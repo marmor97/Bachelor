@@ -1,5 +1,11 @@
 #Lasso loop
-lasso_function <- function(train_data, folds, id_col, featureset = featureset, language = language){
+lasso_function <- function(train_data, 
+                           folds, 
+                           id_col, 
+                           featureset = featureset, 
+                           language = language,
+                           hold_set,
+                           demo_set){
   fold_train <- train_data %>% 
     groupdata2::fold(.,
                      k = folds,
@@ -7,6 +13,17 @@ lasso_function <- function(train_data, folds, id_col, featureset = featureset, l
   
   # pacman::p_load(doMC)
   # registerDoMC(cores = 3)
+  # print("trying to make specific hold_out")
+  # #writing the csv
+  # hold_set$ID <- as.character(hold_set$ID)
+  # print("ID changed to characther")
+  # demo_set <- demo_set %>% select(
+  #   Diagnosis,
+  #   ID,
+  #   Gender
+  # )
+  # hold_set <- left_join(hold_set, demo_set, by = "ID")
+  # print("ID combined with demo")
   
   #for i in nfolds
   for(i in (1:length(unique(fold_train$.folds)))){
@@ -20,10 +37,8 @@ lasso_function <- function(train_data, folds, id_col, featureset = featureset, l
     
     ###DEFINING VARIABLES
     x <- model.matrix(Diagnosis ~ ., data = lasso_train[,1:(length(lasso_train)-1)]) #making a matrix from formula
-    print(nrow(x))
     y <- lasso_train$Diagnosis #choosing the dependent variable
-    print(length(y))
-    
+
     #lambdas <- seq(0.0001, 1000, length = 65000)
     
     ###LASSO
@@ -57,17 +72,23 @@ lasso_function <- function(train_data, folds, id_col, featureset = featureset, l
      if (language == "dk"){
        train_csv <- fold_train[,c("ID", "Gender", "Diagnosis", ".folds",
                                   colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
+       hold_out_set <- hold_set[,c("ID", "Gender", "Diagnosis",
+                               colnames(hold_set[,(colnames(hold_set) %in% lasso_coef$term)]))]
      }
      else {
        train_csv <- fold_train[,c("ID", "Diagnosis", ".folds",
                                   colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
+       hold_out_set <- hold_set[,c("ID", "Gender", "Diagnosis",
+                               colnames(hold_set[,(colnames(hold_set) %in% lasso_coef$term)]))]
      }
-    #writing the csv
-     hold_out <-  hold_out_scaled[,c(colnames(hold_out_scaled[,(colnames(hold_out_scaled) %in% colnames(train_csv))]))]
+
      
-     #writing the csv
+     print("hold out set successfully made")
+    #writing the csv
      write.csv(train_csv, paste(name, "csv", sep = "."))
-     write.csv(hold_out, paste("holdout", name, "csv", sep = "."))
+     write.csv(hold_out_set, paste("holdout", name, "csv", sep = "."))
+     
+    
     
   }
 }

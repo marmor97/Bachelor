@@ -28,7 +28,6 @@ egemaps_us <- read_csv("egemaps_us.csv")
 gemaps_dk  <- read_csv("gemaps_dk.csv") 
 gemaps_us  <- read_csv("gemaps_us.csv")
 demodata   <- read_csv("../DemoData.csv")
-
 ```
 
 Function to run on all six files
@@ -76,7 +75,6 @@ grand_function <- function(feature_dataframe,
                  hold_out, 
                  datatype = "test"))
   
-  write.csv(hold_out_scaled, "hold_out_scaled_t1_gemaps_dk.csv")
   ###Combining demo and feature-set values###
   train_scaled <- train_scaled %>% #combining demodata and features
   left_join(demo, 
@@ -108,6 +106,36 @@ grand_function <- function(feature_dataframe,
     Leiter
      ))
 
+  hold_out_scaled <- hold_out_scaled %>% #combining demodata and features
+  left_join(demo, 
+            by = "ID") %>% 
+  mutate(
+    Diagnosis = as.factor(Diagnosis),
+    Gender = as.factor(Gender)#changing diagnosis column to factor
+  )  %>% 
+  select( #we will not use any of the descriptive columns in the analysis and remove them from the dataset 
+  -c(X1,
+    condition,
+    frameTime, 
+    language, 
+    country, 
+    feature_set, 
+    story_type,
+    Age,
+    AdosCreativity,
+    AdosSocial,
+    AdosStereotyped,
+    AdosCommunication,
+    TIQ,
+    PIQ,
+    VIQ,
+    SRS,
+    PPVT,
+    ParentalEducation,
+    CARS,
+    Leiter
+     ))
+  
   
   ###Removing column w/ zero variation and no factor variation###
   badcolumns <- clean_cols(df = train_scaled)
@@ -118,7 +146,9 @@ grand_function <- function(feature_dataframe,
                  folds = n_lasso_folds,
                  id_col = "ID",
                  featureset = featureset,
-                 language = language)
+                 language = language,
+                 hold_set = hold_out_scaled,
+                 demo_set = demo)
   
 }
 ```
@@ -126,10 +156,23 @@ grand_function <- function(feature_dataframe,
 
 Running on gemaps_dk
 ```{r}
+
+t1 <- read.csv("hold_out_scaled_t1_gemaps_dk.csv")
+t1$ID <- as.character(t1$ID)
+heh <- left_join(t1, demo, by = "ID")
+
+heh[,colnames(heh[,(colnames(heh) %in% colnames(las_1))])]
+
 grand_function(feature_dataframe = gemaps_dk, 
                demo_dataframe = demodata, 
                language = "dk",
                featureset = "gemaps")
+
+
+heh[,colnames(heh[,(colnames(heh) %in% colnames(las_1))])]
+
+
+colnames(heh[,(colnames(heh) %in% colnames(las_1))])
 
 ```
 
