@@ -63,7 +63,7 @@ lasso_function <- function(train_data, folds, id_col, featureset = featureset, l
                                   colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
      }
     #writing the csv
-     hold_out <-  hold_out[,c(colnames(hold_out[,(colnames(hold_out) %in% colnames(train_csv))]))]
+     hold_out <-  hold_out_scaled[,c(colnames(hold_out_scaled[,(colnames(hold_out_scaled) %in% colnames(train_csv))]))]
      
      #writing the csv
      write.csv(train_csv, paste(name, "csv", sep = "."))

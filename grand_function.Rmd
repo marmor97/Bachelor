@@ -27,7 +27,7 @@ egemaps_dk <- read_csv("egemaps_dk.csv")
 egemaps_us <- read_csv("egemaps_us.csv")
 gemaps_dk  <- read_csv("gemaps_dk.csv") 
 gemaps_us  <- read_csv("gemaps_us.csv")
-demodata   <- read_csv("DemoData.csv")
+demodata   <- read_csv("../DemoData.csv")
 
 ```
 
@@ -76,6 +76,7 @@ grand_function <- function(feature_dataframe,
                  hold_out, 
                  datatype = "test"))
   
+  write.csv(hold_out_scaled, "hold_out_scaled_t1_gemaps_dk.csv")
   ###Combining demo and feature-set values###
   train_scaled <- train_scaled %>% #combining demodata and features
   left_join(demo, 
@@ -113,10 +114,10 @@ grand_function <- function(feature_dataframe,
   train_scaled_clean <- train_scaled[ ,!(colnames(train_scaled) %in% c(badcolumns))] 
   
   ###Lasso looping ###
-  lasso_function(train_data = train_scaled_clean, 
+  lasso_function(train_data = train_scaled_clean,
                  folds = n_lasso_folds,
-                 id_col = "ID", 
-                 featureset = featureset, 
+                 id_col = "ID",
+                 featureset = featureset,
                  language = language)
   
 }
@@ -129,6 +130,7 @@ grand_function(feature_dataframe = gemaps_dk,
                demo_dataframe = demodata, 
                language = "dk",
                featureset = "gemaps")
+
 ```
 
 Running on egemaps_dk
