@@ -15,8 +15,8 @@ library(tidyverse)
 #scaling function
 scale_function <- function(df1, df2, datatype){
   if (datatype=="train") {
-    for (i in names(df1)){
-      if(is.numeric(df1[,i])){
+    for (i in 1:length((df1))){
+      if (sapply(df1[,i], is.numeric) == T){
       xmin = min(df1[i])
       xmax = max(df1[i])
       df1[i] <- (df1[i]-xmin)/(xmax - xmin)
@@ -25,7 +25,7 @@ scale_function <- function(df1, df2, datatype){
   }
   if (datatype == "test"){
     for (i in names(df2)){
-      if(is.numeric(df2[,i])){
+      if(sapply(df1[,i], is.numeric) == T){
       xmin = min(df1[i])
       xmax = max(df1[i])
       df2[i] <- (df2[i]-xmin)/(xmax - xmin)

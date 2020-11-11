@@ -5,8 +5,8 @@ lasso_function <- function(train_data, folds, id_col, featureset = featureset, l
                      k = folds,
                      id_col = id_col)  #new col called .fold
   
-  pacman::p_load(doMC)
-  registerDoMC(cores = 3)
+  # pacman::p_load(doMC)
+  # registerDoMC(cores = 3)
   
   #for i in nfolds
   for(i in (1:length(unique(fold_train$.folds)))){
@@ -24,18 +24,18 @@ lasso_function <- function(train_data, folds, id_col, featureset = featureset, l
     y <- lasso_train$Diagnosis #choosing the dependent variable
     print(length(y))
     
-    lambdas <- seq(0.0001, 1000, length = 65000)
+    #lambdas <- seq(0.0001, 1000, length = 65000)
     
     ###LASSO
     set.seed(2020)
-    cv_lasso <- system.time(cv.glmnet(x, 
-                                       y, 
-                                       alpha = 1, # Setting alpha = 1 implements lasso regression
-                                       standardize = F,
-                                       lambda = lambdas,
-                                       family = "binomial",
-                                       type.measure = "auc",
-                                       parallel = TRUE))
+    cv_lasso <- cv.glmnet(x, 
+                          y, 
+                          alpha = 1, # Setting alpha = 1 implements lasso regression
+                          standardize = F,
+                          #lambda = lambdas,
+                          family = "binomial",
+                          type.measure = "auc")
+                           #parallel = TRUE))
     
     
     ###EXTRACTING COEFFICIENTS
@@ -49,19 +49,25 @@ lasso_function <- function(train_data, folds, id_col, featureset = featureset, l
              test_fold = paste(i)) %>% 
       filter(abs > 0)
     
+   # return(cv_lasso) # Do this if you want to get the lambda plot
+    
     #Making name for the csvfile
-    name <- paste("lasso", featureset, language, "testfold", i, sep = "_")
-    #selecting columns to keep in csv file
-    if (language == "dk"){
-      train_csv <- fold_train[,c("ID", "Gender", "Diagnosis", ".folds",
-                                 colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
-    }
-    else {
-      train_csv <- fold_train[,c("ID", "Diagnosis", ".folds",
-                                 colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
-    }
+     name <- paste("lasso", featureset, language, "testfold", i, sep = "_")
+    # #selecting columns to keep in csv file
+     if (language == "dk"){
+       train_csv <- fold_train[,c("ID", "Gender", "Diagnosis", ".folds",
+                                  colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
+     }
+     else {
+       train_csv <- fold_train[,c("ID", "Diagnosis", ".folds",
+                                  colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
+     }
     #writing the csv
-    write.csv(train_csv, paste(name, "csv", sep = "."))
+     hold_out <-  hold_out[,c(colnames(hold_out[,(colnames(hold_out) %in% colnames(train_csv))]))]
+     
+     #writing the csv
+     write.csv(train_csv, paste(name, "csv", sep = "."))
+     write.csv(hold_out, paste("holdout", name, "csv", sep = "."))
     
   }
 }
