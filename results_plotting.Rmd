@@ -1,0 +1,128 @@
+---
+title: "Plotting_results"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading needed packages and sources
+```{r}
+library(pacman)
+p_load(ggplot2, tidyverse, wesanderson)
+source("functions/Plotting.R")
+```
+
+Loading GeMAPS data and preparing it
+```{r}
+####Loading rbf data####
+gemaps_rbf_report_1 <- read_csv("class_reports/gemaps_dk_rbf_ClassificationReport_1.csv")
+gemaps_rbf_report_2 <- read_csv("class_reports/gemaps_dk_rbf_ClassificationReport_2.csv")
+gemaps_rbf_report_3 <- read_csv("class_reports/gemaps_dk_rbf_ClassificationReport_3.csv")
+gemaps_rbf_report_4 <- read_csv("class_reports/gemaps_dk_rbf_ClassificationReport_4.csv")
+gemaps_rbf_report_5 <- read_csv("class_reports/gemaps_dk_rbf_ClassificationReport_5.csv")
+
+####Loading linear data####
+gemaps_lin_report_1 <- read_csv("class_reports/gemaps_dk_ClassificationReport_1.csv")
+gemaps_lin_report_2 <- read_csv("class_reports/gemaps_dk_ClassificationReport_2.csv")
+gemaps_lin_report_3 <- read_csv("class_reports/gemaps_dk_ClassificationReport_3.csv")
+gemaps_lin_report_4 <- read_csv("class_reports/gemaps_dk_ClassificationReport_4.csv")
+gemaps_lin_report_5 <- read_csv("class_reports/gemaps_dk_ClassificationReport_5.csv")
+
+####Loading sigmoid data####
+gemaps_sig_report_1 <- read_csv("class_reports/gemaps_dk_sigmoid_ClassificationReport_1.csv")
+gemaps_sig_report_2 <- read_csv("class_reports/gemaps_dk_sigmoid_ClassificationReport_2.csv")
+gemaps_sig_report_3 <- read_csv("class_reports/gemaps_dk_sigmoid_ClassificationReport_3.csv")
+gemaps_sig_report_4 <- read_csv("class_reports/gemaps_dk_sigmoid_ClassificationReport_4.csv")
+gemaps_sig_report_5 <- read_csv("class_reports/gemaps_dk_sigmoid_ClassificationReport_5.csv")
+
+####Making lists####
+gemaps_rbf_report_list <- list(gemaps_rbf_report_1,
+                        gemaps_rbf_report_2,
+                        gemaps_rbf_report_3,
+                        gemaps_rbf_report_4,
+                        gemaps_rbf_report_5)
+
+gemaps_lin_report_list <- list(gemaps_lin_report_1,
+                        gemaps_lin_report_2,
+                        gemaps_lin_report_3,
+                        gemaps_lin_report_4,
+                        gemaps_lin_report_5)
+
+gemaps_sig_report_list <- list(gemaps_sig_report_1,
+                        gemaps_sig_report_2,
+                        gemaps_sig_report_3,
+                        gemaps_sig_report_4,
+                        gemaps_sig_report_5)
+
+
+####Making datasets####
+gemaps_lin_data <- for_plotting(gemaps_lin_report_list, "linear")
+gemaps_rbf_data <- for_plotting(gemaps_rbf_report_list, "rbf") 
+gemaps_sig_data <- for_plotting(gemaps_sig_report_list, "sigmoid")
+
+all_data_gemaps <- rbind(gemaps_lin_data,gemaps_rbf_data,gemaps_sig_data)
+```
+
+Loading eGeMAPS and preparing
+```{r}
+####Loading rbf data####
+egemaps_rbf_report_1 <- read_csv("class_reports/egemaps_dk_rbf_ClassificationReport_1.csv")
+egemaps_rbf_report_2 <- read_csv("class_reports/egemaps_dk_rbf_ClassificationReport_2.csv")
+egemaps_rbf_report_3 <- read_csv("class_reports/egemaps_dk_rbf_ClassificationReport_3.csv")
+egemaps_rbf_report_4 <- read_csv("class_reports/egemaps_dk_rbf_ClassificationReport_4.csv")
+egemaps_rbf_report_5 <- read_csv("class_reports/egemaps_dk_rbf_ClassificationReport_5.csv")
+
+####Loading linear data####
+egemaps_lin_report_1 <- read_csv("class_reports/egemaps_dk_ClassificationReport_1.csv")
+egemaps_lin_report_2 <- read_csv("class_reports/egemaps_dk_ClassificationReport_2.csv")
+egemaps_lin_report_3 <- read_csv("class_reports/egemaps_dk_ClassificationReport_3.csv")
+egemaps_lin_report_4 <- read_csv("class_reports/egemaps_dk_ClassificationReport_4.csv")
+egemaps_lin_report_5 <- read_csv("class_reports/egemaps_dk_ClassificationReport_5.csv")
+
+####Loading sigmoid data ####
+egemaps_sig_report_1 <- read_csv("class_reports/egemaps_dk_sigmoid_ClassificationReport_1.csv")
+egemaps_sig_report_2 <- read_csv("class_reports/egemaps_dk_sigmoid_ClassificationReport_2.csv")
+egemaps_sig_report_3 <- read_csv("class_reports/egemaps_dk_sigmoid_ClassificationReport_3.csv")
+egemaps_sig_report_4 <- read_csv("class_reports/egemaps_dk_sigmoid_ClassificationReport_4.csv")
+egemaps_sig_report_5 <- read_csv("class_reports/egemaps_dk_sigmoid_ClassificationReport_5.csv")
+
+####Making lists####
+egemaps_rbf_report_list <- list(egemaps_rbf_report_1,
+                        egemaps_rbf_report_2,
+                        egemaps_rbf_report_3,
+                        egemaps_rbf_report_4,
+                        egemaps_rbf_report_5)
+
+egemaps_lin_report_list <- list(egemaps_lin_report_1,
+                        egemaps_lin_report_2,
+                        egemaps_lin_report_3,
+                        egemaps_lin_report_4,
+                        egemaps_lin_report_5)
+
+egemaps_sig_report_list <- list(egemaps_sig_report_1,
+                        egemaps_sig_report_2,
+                        egemaps_sig_report_3,
+                        egemaps_sig_report_4,
+                        egemaps_sig_report_5)
+
+####Making datasets####
+egemaps_lin_data <- for_plotting(egemaps_lin_report_list, "linear")
+egemaps_rbf_data <- for_plotting(egemaps_rbf_report_list, "rbf") 
+egemaps_sig_data <- for_plotting(egemaps_sig_report_list, "sigmoid")
+
+all_data_egemaps <- rbind(egemaps_lin_data,egemaps_rbf_data,egemaps_sig_data)
+```
+
+
+Plotting the results
+```{r}
+source("functions/Plotting.R")
+#Gemaps
+plot_performance(all_data_gemaps, title = "GeMAPS DK")
+
+#egemaps
+plot_performance(all_data_egemaps, title = "eGeMAPS DK")
+```
+
