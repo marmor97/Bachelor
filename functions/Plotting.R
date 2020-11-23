@@ -2,10 +2,20 @@ library(pacman)
 p_load(ggplot2, tidyverse, wesanderson)
 
 ####Function that prepares data for plotting####
-
+# files <- list.files(path = "~/Uni/Bachelor/Data/Bachelor/class_reports_dk", 
+#                     pattern = "*.csv",
+#                     full.names = F)
+# regmatches(files[[1]], 
+#            gregexpr("[a-z]*", 
+#                     files[[1]]))#[[1]]#[3]
 
 prepare_file <- function(filename, path = getwd()) {
-  filepath = paste0(path, "/class_reports/", filename, sep = "")
+  if (regmatches(filename, gregexpr("[a-z]*", filename))[[1]][3] == "dk"){
+  filepath = paste0(path, "/class_reports_dk/", filename, sep = "")
+  } 
+  if (regmatches(filename, gregexpr("[a-z]*", filename))[[1]][3] == "us"){
+  filepath = paste0(path, "/class_reports_us/", filename, sep = "")
+  }
   file = read_csv(filepath)
   colnames(file)[1] <- "Metric"
   colnames(file)[2] <- "TD"

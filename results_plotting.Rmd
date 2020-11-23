@@ -14,25 +14,52 @@ p_load(ggplot2, tidyverse, wesanderson)
 source("functions/Plotting.R")
 ```
 
-Loading data and preparing it
+Loading DK files and preparing it
 ```{r}
-files <- list.files(path = "~/Uni/Bachelor/Data/Bachelor/class_reports", 
+files_dk <- list.files(path = "~/Uni/Bachelor/Data/Bachelor/class_reports_dk", 
                     pattern = "*.csv",
                     full.names = F)
 
-all_data <- files %>%
+all_data_dk <- files %>%
   map_df(prepare_file)
-```
 
+```
 
 Plotting the results
 ```{r}
 #Gemaps
-all_data %>% subset(Featureset == "gemaps") %>% 
+all_data_dk %>% subset(Featureset == "gemaps") %>% 
   plot_performance(title = "GeMAPS DK")
 
 #egemaps
-all_data %>% subset(Featureset == "egemaps") %>% 
+all_data_dk %>% subset(Featureset == "egemaps") %>% 
   plot_performance(title = "eGeMAPS DK")
+
+#compare
+all_data_dk %>% subset(Featureset == "compare") %>% 
+  plot_performance(title = "ComParE DK")
+```
+
+Loading US files and preparing it
+```{r}
+files_us <- list.files(path = "~/Uni/Bachelor/Data/Bachelor/class_reports_us", 
+                    pattern = "*.csv",
+                    full.names = F)
+
+all_data_us <- files_us %>% 
+  map_df(prepare_file)
+```
+
+Plotting the results
+```{r}
+all_data_us %>% subset(Featureset == "gemaps") %>% 
+  plot_performance(title = "GeMAPS US")
+
+all_data_us %>% subset(Featureset == "egemaps") %>% 
+  plot_performance(title = "eGeMAPS US")
+
+all_data_us %>% subset(Featureset == "compare") %>% 
+  plot_performance(title = "ComParE US")
+
 ```
 
