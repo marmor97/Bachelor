@@ -20,7 +20,7 @@ files_dk <- list.files(path = "~/Uni/Bachelor/Data/Bachelor/class_reports_dk",
                     pattern = "*.csv",
                     full.names = F)
 
-all_data_dk <- files %>%
+all_data_dk <- files_dk %>%
   map_df(prepare_file)
 
 ```
