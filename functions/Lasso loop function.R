@@ -69,21 +69,15 @@ lasso_function <- function(train_data,
     #Making name for the csvfile
      name <- paste("lasso", featureset, language, "testfold", i, sep = "_")
     # #selecting columns to keep in csv file
-     if (language == "dk"){
-       train_csv <- fold_train[,c("ID", "Gender", "Diagnosis", ".folds",
-                                  colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
-       hold_out_set <- hold_set[,c("ID", "Gender", "Diagnosis",
-                               colnames(hold_set[,(colnames(hold_set) %in% lasso_coef$term)]))]
-     }
-     else {
+
        train_csv <- fold_train[,c("ID", "Diagnosis", ".folds",
                                   colnames(fold_train[,(colnames(fold_train) %in% lasso_coef$term)]))]
-       hold_out_set <- hold_set[,c("ID", "Gender", "Diagnosis",
+       hold_out_set <- hold_set[,c("ID", "Diagnosis",
                                colnames(hold_set[,(colnames(hold_set) %in% lasso_coef$term)]))]
-     }
+     
 
      
-     print("hold out set successfully made")
+     print("hold out and train set successfully made")
     #writing the csv
      write.csv(train_csv, paste(name, "csv", sep = "."))
      write.csv(hold_out_set, paste("holdout", name, "csv", sep = "."))
