@@ -25,7 +25,7 @@ all_data_dk <- files_dk %>%
 
 ```
 
-Plotting the results
+Plotting the performance results
 ```{r}
 #Gemaps
 all_data_dk %>% subset(Featureset == "gemaps") %>% 
@@ -39,6 +39,17 @@ all_data_dk %>% subset(Featureset == "egemaps") %>%
 all_data_dk %>% subset(Featureset == "compare") %>% 
   plot_performance(title = "ComParE DK")
 ```
+
+Plotting the precision/recall for all folds 
+```{r}
+all_data_dk %>% pre_recall("gemaps", "linear", title = "GeMAPS linear kernel")
+
+all_data_dk %>% pre_recall("egemaps", "rbf", title = "eGeMAPS RBF kernel")
+
+all_data_dk %>% pre_recall("compare", "linear", title = "ComParE linear kernel")
+
+```
+
 
 Loading US files and preparing it
 ```{r}
@@ -61,5 +72,14 @@ all_data_us %>% subset(Featureset == "egemaps") %>%
 all_data_us %>% subset(Featureset == "compare") %>% 
   plot_performance(title = "ComParE US")
 
+```
+
+Plotting precision/recall for all folds
+```{r}
+all_data_us %>% pre_recall("gemaps", "linear", "GeMAPS linear kernel")
+
+all_data_us %>% pre_recall("egemaps", "sigmoid", "eGeMAPS sigmoid kernel")
+
+all_data_us %>% pre_recall("compare", "sigmoid", "ComParE sigmoid kernel")
 ```
 

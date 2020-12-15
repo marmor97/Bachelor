@@ -1,5 +1,5 @@
 library(pacman)
-p_load(ggplot2, tidyverse, wesanderson)
+p_load(ggplot2, tidyverse, wesanderson, ggpubr)
 
 ####Function that prepares data for plotting####
 # files <- list.files(path = "~/Uni/Bachelor/Data/Bachelor/class_reports_dk", 
@@ -41,10 +41,31 @@ prepare_file <- function(filename, path = getwd()) {
 plot_performance <- function(data, title){
   data %>% 
     subset(Metric == "f1-score") %>% 
-    ggplot(aes(Kernel, Weighted_avg, fill = Fold))+
+    ggplot(aes(Kernel, Macro_avg, fill = Fold))+
     geom_bar(stat = "summary", position = "dodge")+
-    labs(x = "Kernel",y = "Performance", title = title)+
+    labs(x = "Kernel",y = "F1-score", title = title)+
     scale_fill_manual(values= wes_palette("Rushmore1", n = 5))+
     theme_light()+
-    theme(text=element_text(family="serif"))
+    theme(text=element_text(family="serif", size = 20))
+}
+
+pre_recall <- function(dataframe, featureset, kernel, title){
+  dataframe$Fold = as.numeric(dataframe$Fold)
+  data = dataframe %>% 
+    filter(Featureset == featureset & Kernel == kernel) %>% 
+    filter(Metric == "precision" | Metric == "recall") %>% 
+    select(-c(Accuracy, Macro_avg, Weighted_avg)) %>% 
+    melt(id.vars = c("Metric", "Featureset", "Kernel", "Fold"), variable.name = "Diagnosis")
+  for (i in 1:length(unique(dataframe$Fold))){
+    print(i)
+    plot = data %>% 
+      ggplot(aes(Metric,value, fill = Diagnosis))+
+      geom_bar(fun.data = mean_se, stat = "summary", position = "dodge", size = 0.1)+
+      labs(title = title, y = "Value")+
+      scale_fill_manual(values= wes_palette("Royal1", n = 2))+
+      theme_light()+
+      theme(text=element_text(family="serif", size = 20))+
+      facet_wrap(~Fold, nrow =1, ncol = 5)
+  }
+  return(plot)
 }
