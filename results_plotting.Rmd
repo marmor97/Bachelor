@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 Loading needed packages and sources
 ```{r}
 library(pacman)
-p_load(ggplot2, tidyverse, wesanderson)
+p_load(ggplot2, tidyverse, wesanderson, reshape2, RColorBrewer)
 source("functions/Plotting.R")
 ```
 
