@@ -1,0 +1,85 @@
+---
+title: "Plotting_results"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading needed packages and sources
+```{r}
+library(pacman)
+p_load(ggplot2, tidyverse, wesanderson, reshape2, RColorBrewer)
+source("functions/Plotting.R")
+```
+
+Loading DK files and preparing it
+```{r}
+files_dk <- list.files(path = "~/Uni/Bachelor/Data/Bachelor/class_reports_dk", 
+                    pattern = "*.csv",
+                    full.names = F)
+
+all_data_dk <- files_dk %>%
+  map_df(prepare_file)
+
+```
+
+Plotting the performance results
+```{r}
+#Gemaps
+all_data_dk %>% subset(Featureset == "gemaps") %>% 
+  plot_performance(title = "GeMAPS DK")
+
+#egemaps
+all_data_dk %>% subset(Featureset == "egemaps") %>% 
+  plot_performance(title = "eGeMAPS DK")
+
+#compare
+all_data_dk %>% subset(Featureset == "compare") %>% 
+  plot_performance(title = "ComParE DK")
+```
+
+Plotting the precision/recall for all folds 
+```{r}
+all_data_dk %>% pre_recall("gemaps", "linear", title = "GeMAPS linear kernel")
+
+all_data_dk %>% pre_recall("egemaps", "rbf", title = "eGeMAPS RBF kernel")
+
+all_data_dk %>% pre_recall("compare", "linear", title = "ComParE linear kernel")
+
+```
+
+
+Loading US files and preparing it
+```{r}
+files_us <- list.files(path = "~/Uni/Bachelor/Data/Bachelor/class_reports_us", 
+                    pattern = "*.csv",
+                    full.names = F)
+
+all_data_us <- files_us %>% 
+  map_df(prepare_file)
+```
+
+Plotting the results
+```{r}
+all_data_us %>% subset(Featureset == "gemaps") %>% 
+  plot_performance(title = "GeMAPS US")
+
+all_data_us %>% subset(Featureset == "egemaps") %>% 
+  plot_performance(title = "eGeMAPS US")
+
+all_data_us %>% subset(Featureset == "compare") %>% 
+  plot_performance(title = "ComParE US")
+
+```
+
+Plotting precision/recall for all folds
+```{r}
+all_data_us %>% pre_recall("gemaps", "linear", "GeMAPS linear kernel")
+
+all_data_us %>% pre_recall("egemaps", "sigmoid", "eGeMAPS sigmoid kernel")
+
+all_data_us %>% pre_recall("compare", "sigmoid", "ComParE sigmoid kernel")
+```
+
